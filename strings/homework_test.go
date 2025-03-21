@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 	"unsafe"
+	"slices"
+	"sync"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -11,27 +13,63 @@ import (
 type COWBuffer struct {
 	data []byte
 	refs *int
-	// need to implement
+	m *sync.Mutex
 }
 
 func NewCOWBuffer(data []byte) COWBuffer {
-	return COWBuffer{} // need to implement
+	refs := 1
+	return COWBuffer{
+		data: data,
+		refs: &refs,
+		m: &sync.Mutex{},
+	}
 }
 
 func (b *COWBuffer) Clone() COWBuffer {
-	return COWBuffer{} // need to implement
+	b.m.Lock()
+	defer b.m.Unlock()
+
+	*b.refs++
+	return COWBuffer{
+		data: b.data,
+		refs: b.refs,
+		m: b.m,
+	}
 }
 
 func (b *COWBuffer) Close() {
-	// need to implement
+	*b.refs--
+	if *b.refs <= 0 {
+		b.refs = nil
+		b.data = nil
+		b.m = nil
+	}
 }
 
 func (b *COWBuffer) Update(index int, value byte) bool {
-	return false // need to implement
+	if b.data == nil {
+		return false
+	}
+
+	if index < 0 || index >= len(b.data) {
+		return false
+	}
+
+	b.m.Lock()
+	defer b.m.Unlock()
+
+	if *b.refs > 1 {
+		*b.refs--
+		*b = NewCOWBuffer(slices.Clone(b.data))
+	}
+	b.data[index] = value
+	return true
 }
 
 func (b *COWBuffer) String() string {
-	return "" // need to implement
+	b.m.Lock()
+	defer b.m.Unlock()
+	return unsafe.String(&b.data[0], len(b.data))
 }
 
 func TestCOWBuffer(t *testing.T) {
@@ -67,7 +105,7 @@ func TestCOWBuffer(t *testing.T) {
 	copy2.Update(0, 'f')
 	current := copy2.data
 
-	// 1 reference - don't need to copy buffer during update
+//	// 1 reference - don't need to copy buffer during update
 	assert.Equal(t, unsafe.SliceData(previous), unsafe.SliceData(current))
 
 	copy2.Close()

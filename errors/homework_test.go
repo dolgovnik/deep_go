@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,56 +9,25 @@ import (
 
 // go test -v homework_test.go
 
-type UserService struct {
-	// not need to implement
-	NotEmptyStruct bool
-}
-type MessageService struct {
-	// not need to implement
-	NotEmptyStruct bool
-}
-
-type Container struct {
+type MultiError struct {
 	// need to implement
 }
 
-func NewContainer() *Container {
+func (e *MultiError) Error() string {
 	// need to implement
-	return &Container{}
+	return ""
 }
 
-func (c *Container) RegisterType(name string, constructor interface{}) {
+func Append(err error, errs ...error) *MultiError {
 	// need to implement
+	return nil
 }
 
-func (c *Container) Resolve(name string) (interface{}, error) {
-	// need to implement
-	return nil, nil
-}
+func TestMultiError(t *testing.T) {
+	var err error
+	err = Append(err, errors.New("error 1"))
+	err = Append(err, errors.New("error 2"))
 
-func TestDIContainer(t *testing.T) {
-	container := NewContainer()
-	container.RegisterType("UserService", func() interface{} {
-		return &UserService{}
-	})
-	container.RegisterType("MessageService", func() interface{} {
-		return &MessageService{}
-	})
-
-	userService1, err := container.Resolve("UserService")
-	assert.NoError(t, err)
-	userService2, err := container.Resolve("UserService")
-	assert.NoError(t, err)
-
-	u1 := userService1.(*UserService)
-	u2 := userService2.(*UserService)
-	assert.False(t, u1 == u2)
-
-	messageService, err := container.Resolve("MessageService")
-	assert.NoError(t, err)
-	assert.NotNil(t, messageService)
-
-	paymentService, err := container.Resolve("PaymentService")
-	assert.Error(t, err)
-	assert.Nil(t, paymentService)
+	expectedMessage := "2 errors occured:\n\t* error 1\t* error 2\n"
+	assert.EqualError(t, err, expectedMessage)
 }

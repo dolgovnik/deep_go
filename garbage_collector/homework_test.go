@@ -1,7 +1,6 @@
 package main
 
 import (
-	"reflect"
 	"testing"
 	"unsafe"
 
@@ -10,9 +9,46 @@ import (
 
 // go test -v homework_test.go
 
+func trace_dfs(ptr uintptr, visited map[uintptr]struct{}) {
+	if ptr == 0 {
+		return
+	}
+
+	if _, ok := visited[ptr]; ok {
+		return
+	}
+
+	visited[ptr] = struct{}{}
+
+	value := *(*uintptr)(unsafe.Pointer(ptr))
+
+	if value != 0 {
+		trace_dfs(value, visited)
+	}
+}
+
+func keys_from_map(m map[uintptr]struct{}) []uintptr {
+	r := make([]uintptr, len(m))
+	i := 0
+	for ptr := range m {
+		r[i] = ptr
+		i++
+	}
+	return r
+}
+
 func Trace(stacks [][]uintptr) []uintptr {
-	// need to implement
-	return nil
+	visited := make(map[uintptr]struct{})
+
+	for _, stack := range stacks {
+		for _, ptr := range stack {
+			if ptr != 0 {
+				trace_dfs(ptr, visited)
+			}
+		}
+	}
+
+	return  keys_from_map(visited)
 }
 
 func TestTrace(t *testing.T) {
@@ -46,7 +82,6 @@ func TestTrace(t *testing.T) {
 		},
 	}
 
-	pointers := Trace(stacks)
 	expectedPointers := []uintptr{
 		uintptr(unsafe.Pointer(&heapPointer1)),
 		uintptr(unsafe.Pointer(&heapObjects[0])),
@@ -57,6 +92,7 @@ func TestTrace(t *testing.T) {
 		uintptr(unsafe.Pointer(&heapPointer3)),
 		uintptr(unsafe.Pointer(&heapObjects[3])),
 	}
+	pointers := Trace(stacks)
 
-	assert.True(t, reflect.DeepEqual(expectedPointers, pointers))
+	assert.ElementsMatch(t, pointers, expectedPointers)
 }

@@ -9,8 +9,79 @@ import (
 
 // go test -v homework_test.go
 
+func forEach(e *entity, f func(int, int)){
+	if e == nil {
+		return
+	}
+	forEach(e.left, f)
+	f(e.k, e.v)
+	forEach(e.right, f)
+}
+
+func minSearch(curr *entity) *entity {
+	if curr.left == nil {
+		return curr
+	}
+	return minSearch(curr.left)
+}
+
+func del(curr *entity, key int) (*entity, bool) {
+	// если не нашли ключ, то ничего не удаляем
+	if curr == nil {
+		return nil, false
+	}
+
+	deleted := false
+
+	// нашли ключ
+	if key == curr.k {
+		// и он - лист - просто удаляем
+		if curr.left == nil && curr.right == nil {
+			return  nil, true
+		}
+		// у него есть левый - ставим этот левый вместо искомого
+		if curr.right == nil {
+			return curr.left, true
+		}
+		// у него есть правый - ставим этот правый вместо искомого
+		if curr.left == nil {
+			return curr.right, true
+		}
+
+		// есть оба - ищем минимальный, ставим его вместо искомого, затем удаляем минимальный
+		change := minSearch(curr.right)
+		curr.k = change.k
+		curr.v = change.v
+		curr.right, deleted = del(curr.right, change.k)
+
+	// ключ больше текущего - идем вправо
+	} else if key > curr.k {
+		curr.right, deleted = del(curr.right, key)
+	// ключ меньше текущего - идем влево
+	} else if key < curr.k {
+		curr.left, deleted = del(curr.left, key)
+	}
+
+	return curr, deleted
+}
+
+type entity struct {
+	k int
+	v int
+	left *entity
+	right *entity
+}
+
+func newEntity(key int, value int) *entity{
+	return &entity{
+			k: key,
+			v: value,
+			}
+}
+
 type OrderedMap struct {
-	// need to implement
+	root *entity
+	size int
 }
 
 func NewOrderedMap() OrderedMap {
@@ -18,23 +89,72 @@ func NewOrderedMap() OrderedMap {
 }
 
 func (m *OrderedMap) Insert(key, value int) {
-	// need to implement
+	if m.root == nil {
+		m.root = newEntity(key, value)
+		m.size++
+		return
+	}
+
+	curr := m.root
+	for curr != nil {
+		if key == curr.k {
+			curr.v = value
+			return
+		}
+		if key > curr.k {
+			if curr.right == nil {
+				curr.right = newEntity(key, value)
+				m.size++
+				return
+			} else {
+				curr = curr.right
+				continue
+			}
+		} else if key < curr.k {
+			if curr.left == nil {
+				curr.left = newEntity(key, value)
+				m.size++
+				return
+			} else {
+				curr = curr.left
+				continue
+			}
+		}
+	}
 }
 
 func (m *OrderedMap) Erase(key int) {
-	// need to implement
+	deleted := false
+	m.root, deleted = del(m.root, key)
+	if deleted {
+		m.size--
+	}	
 }
 
 func (m *OrderedMap) Contains(key int) bool {
-	return false // need to implement
+	curr :=  m.root
+	for curr != nil {
+		if key == curr.k {
+			return true
+		}
+		if key > curr.k {
+			curr = curr.right
+			continue
+		}
+		if key < curr.k {
+			curr = curr.left
+			continue
+		}
+	}
+	return false 
 }
 
 func (m *OrderedMap) Size() int {
-	return 0 // need to implement
+	return m.size
 }
 
 func (m *OrderedMap) ForEach(action func(int, int)) {
-	// need to implement
+	forEach(m.root, action)
 }
 
 func TestCircularQueue(t *testing.T) {

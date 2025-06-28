@@ -12,6 +12,7 @@ import (
 
 // go test -v homework_test.go
 
+
 type WorkerPool struct {
 	tasks chan func()
 	wg sync.WaitGroup
